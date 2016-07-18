@@ -2,7 +2,7 @@
  use DMAPP-based version of MPI RMA
 export MPICH_RMA_OVER_DMAPP=1
 
-CC -Wl,--whole-archive,-ldmapp,--no-whole-archive main3.c && time aprun -N24 -n 96 ./a.out
+aprun -N24 -n 96 ./cart-pscw.x
  */
 
 #include <assert.h>
@@ -12,7 +12,7 @@ CC -Wl,--whole-archive,-ldmapp,--no-whole-archive main3.c && time aprun -N24 -n 
 
 const int iterations = 100;
 const int message_size = 12*2*3*8*8; // MPI_COMPLEX
-const int window_size = 16 * 6 * message_size; //bytes
+const int window_size = 16 * 6 * (12*2*3*8*8); //bytes
 const int work_time = 500;
 const int longer_time = 1000;
 const int longer_time2 = 0;

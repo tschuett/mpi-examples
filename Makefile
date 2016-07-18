@@ -11,25 +11,18 @@ else
   NVC=@
 endif
 
-SRC_CPP=$(wildcard *.cpp)
-
-OBJS=$(SRC_CPP:.cpp=.o)
+CFLAGS=
 
 all: cart-pscw.x
 
 %.x: %.o
 	$(NVC)echo -e "\e[0;33mCreating $@\033[39m"
-	$(LD) $(LDFLAGS) $< -o $@
+	$(VC)$(LD) $(LDFLAGS) $< -o $@
 
 .c.o: Makefile
 	$(NVC)echo -e "\e[0;32mCompiling" $< "\033[39m"
-	$(VC)$(CXX) -MD $(CXXFLAGS)  -c $< -o $@
+	$(VC)$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	@-rm -rf $(shell find . -type f -name '*.o')
-	@-rm -rf $(shell find . -type f -name '*.d')
 	@-rm -f *.x
-
--include $(OBJS:.o=.d)
-
-.PHONY: clean
