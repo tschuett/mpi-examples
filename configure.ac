@@ -11,7 +11,7 @@ dnl ac_cv_search_hbw_check_available=-lmemkind
 AH_TEMPLATE([HAVE_MEMKIND], [whether the memkind library is available])
 if test "x${ac_cv_search_hbw_check_available}" != "xno"; then
    AC_DEFINE(HAVE_MEMKIND)
-   LDFLAGS="${LDFLAGS} ac_cv_search_hbw_check_available"
+   LDFLAGS="${LDFLAGS} ${ac_cv_search_hbw_check_available}"
 fi
 
 dnl check if a cray prgenv wrapper compiler is being used
