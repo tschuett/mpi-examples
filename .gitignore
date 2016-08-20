@@ -1,0 +1,11 @@
+*~
+*.x
+config.log
+autom4te.cache
+config.status
+aclocal.m4
+config.h
+config.h.in
+conftest.cpp
+conftest.er1
+Makefile

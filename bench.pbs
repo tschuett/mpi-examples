@@ -1,0 +1,21 @@
+#!/bin/bash -l
+#PBS -N bench
+#PBS -j eo
+#PBS -l walltime=0:20:00
+#PBS -l nodes=80:ppn=68
+#PBS -l os=CLE_quad_flat
+
+# use DMAPP-based version of MPI RMA
+export MPICH_RMA_OVER_DMAPP=1
+
+# allocate memory for MPI_Alloc_mem and MPI_Win_allocate to MCDRAM (Phi)
+export MPICH_ALLOC_MEM_AFFINITY=MCDRAM
+
+# allocation to MCDRAM is mandatory (Phi)
+export MPICH_ALLOC_MEM_POLICY=M
+
+# page size for MPI_Alloc_mem and MPI_Win_allocate (Xeon and Phi)
+export MPICH_ALLOC_MEM_PG_SZ=2M
+
+# display all mpich environment variables
+#export MPICH_ENV_DISPLAY=1
