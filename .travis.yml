@@ -13,7 +13,7 @@ addons:
       
 script:
   - CXX=g++-6 ./configure
-  - echo mpi*
+  - mpiCC -v
   - cat Makefile
   - make
   
