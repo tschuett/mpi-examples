@@ -6,7 +6,8 @@ addons:
       - boost-latest
       - ubuntu-toolchain-r-test
     packages:
-      - openmpi
+      - openmpi-bin
+      - libopenmpi-dev
       - g++-6
       - libboost1.55-all-dev
       
