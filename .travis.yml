@@ -12,8 +12,7 @@ addons:
       - libboost1.55-all-dev
       
 script:
-  - CXX=g++-6 ./configure
-  - mpiCC -v
-  - cat Makefile
-  - make
+  - ./configure
+  - OMPI_CXX=g++-6 mpiCC -v
+  - OMPI_CXX=g++-6 make
   
