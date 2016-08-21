@@ -1,15 +1,16 @@
-language: c++
+language: cpp
 
 addons:
   apt:
     sources:
       - boost-latest
+      - ubuntu-toolchain-r-test
     packages:
-      - ompi
-      - clang
+      - openmpi
+      - g++-6
       - libboost1.55-all-dev
       
 script:
-  - ./configure
+  - CXX=g++-6 ./configure
   - make
   
