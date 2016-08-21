@@ -1,0 +1,15 @@
+language: c++
+
+addons:
+  apt:
+    sources:
+      - boost-latest
+    packages:
+      - openmpi
+      - clang
+      - libboost1.55-all-dev
+      
+script:
+  - ./configure
+  - make
+  
