@@ -2782,8 +2782,41 @@ fi
 { $as_echo "$as_me:${as_lineno-$LINENO}: result: $me_cv_cray" >&5
 $as_echo "$me_cv_cray" >&6; }
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether compiler is intel" >&5
+$as_echo_n "checking whether compiler is intel... " >&6; }
+if ${me_cv_intel+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+#ifndef __INTEL_COMPILER
+  int fail-1;
+#endif
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  me_cv_intel=yes
+else
+  me_cv_intel=no
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $me_cv_intel" >&5
+$as_echo "$me_cv_intel" >&6; }
+
 if test "x${me_cv_cray}" = "xyes" ; then
   CXXFLAGS="${CXXFLAGS} -h std=c++11"
+elif test "x${me_cv_intel}" = "xyes" ; then
+  CXXFLAGS="${CXXFLAGS} -qopenmp -qoptreport=5"
+  LDFLAGS="${LDFLAGS} -qopenmp"
 else
   CXXFLAGS="${CXXFLAGS} -fopenmp"
   LDFLAGS="${LDFLAGS} -fopenmp"

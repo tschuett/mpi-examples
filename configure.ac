@@ -37,8 +37,22 @@ AC_CACHE_CHECK([whether compiler is cray],
                             [me_cv_cray=yes],
                             [me_cv_cray=no])])
 
+AC_CACHE_CHECK([whether compiler is intel],
+              [me_cv_intel],
+              [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],
+                                                  [
+#ifndef __INTEL_COMPILER
+  int fail[-1];
+#endif
+])],
+                            [me_cv_intel=yes],
+                            [me_cv_intel=no])])
+
 if test "x${me_cv_cray}" = "xyes" ; then
   CXXFLAGS="${CXXFLAGS} -h std=c++11"
+elif test "x${me_cv_intel}" = "xyes" ; then
+  CXXFLAGS="${CXXFLAGS} -qopenmp -qoptreport=5"
+  LDFLAGS="${LDFLAGS} -qopenmp"
 else
   CXXFLAGS="${CXXFLAGS} -fopenmp"
   LDFLAGS="${LDFLAGS} -fopenmp"
