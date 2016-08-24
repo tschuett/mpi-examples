@@ -51,7 +51,7 @@ AC_CACHE_CHECK([whether compiler is intel],
 if test "x${me_cv_cray}" = "xyes" ; then
   CXXFLAGS="${CXXFLAGS} -h std=c++11"
 elif test "x${me_cv_intel}" = "xyes" ; then
-  CXXFLAGS="${CXXFLAGS} -qopenmp -qoptreport=5"
+  CXXFLAGS="${CXXFLAGS} -qopenmp -restrict -qopt-report=5"
   LDFLAGS="${LDFLAGS} -qopenmp"
 else
   CXXFLAGS="${CXXFLAGS} -fopenmp"
@@ -61,7 +61,7 @@ fi
 if test "x${cray_prgenv_wrapper}" = "xyes" ; then
   LDFLAGS="${LDFLAGS} -Wl,--whole-archive,-ldmapp,--no-whole-archive"
 fi
-  
+
 AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 
 AC_SUBST(CXX)
