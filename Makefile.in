@@ -12,7 +12,7 @@ else
   NVC=@
 endif
 
-all: cart-pscw-bug.x cart-active-fence.x cart-active-pscw.x cart-immediate-msg.x #cart-passive-counter.x
+all: cart-pscw-bug.x cart-active-fence.x cart-active-pscw.x cart-immediate-msg.x cart-passive-counter.x
 
 %.x: %.o simple.o my-malloc.o
 	$(NVC)echo -e "\e[0;33mCreating $@\033[39m"

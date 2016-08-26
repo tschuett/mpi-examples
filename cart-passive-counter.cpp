@@ -14,6 +14,8 @@
 
 const int iterations = 1000;
 
+const uint64_t one = 1;
+
 using namespace std;
 
 int main(int argc, char **argv) {
@@ -32,7 +34,7 @@ int main(int argc, char **argv) {
   MPI_Win data_win;            // window for data exchange
   double *baseptr = nullptr;   // base pointer of the data window
   MPI_Win counter_win;         // window for counters
-  uint64_t *counter_baseptr = nullptr; // base pointer of the counter window
+  volatile uint64_t *counter_baseptr = nullptr; // base pointer of the counter window
 
   MPI_Init(&argc, &argv);
 
@@ -82,16 +84,17 @@ int main(int argc, char **argv) {
   memset(in,  0, (N+2)*(N+2)*(N+2)*sizeof(double));
   memset(out, 0, (N+2)*(N+2)*(N+2)*sizeof(double));
 
-  res = MPI_Win_allocate(6*N*N*sizeof(double), sizeof(double), MPI_INFO_NULL, comm_cart,
-                         &baseptr, &data_win);
+  // data window
+  res = MPI_Win_allocate(6*N*N*sizeof(double), sizeof(double),
+			 MPI_INFO_NULL, comm_cart, &baseptr, &data_win);
   assert(res == 0);
   memset(baseptr, 0, 6*N*N*sizeof(double));
 
   // create counter window
-  res = MPI_Win_allocate(6*sizeof(uint64_t), sizeof(uint64_t), MPI_INFO_NULL,
+  res = MPI_Win_allocate(12*sizeof(uint64_t), sizeof(uint64_t), MPI_INFO_NULL,
                          comm_cart, &counter_baseptr, &counter_win);
   assert(res == 0);
-  memset(counter_baseptr, 0, 6*sizeof(uint64_t));
+  memset((void *)counter_baseptr, 0, 12*sizeof(uint64_t));
 
   // data output goes into the window
   for(int i = 0; i < 6; i++)
@@ -103,12 +106,13 @@ int main(int argc, char **argv) {
   MPI_Win_lock_all(MPI_MODE_NOCHECK, data_win);
   MPI_Win_lock_all(MPI_MODE_NOCHECK, counter_win);
 
-  for(int epoch = 1; epoch < iterations+1; epoch++) {
+  MPI_Barrier(MPI_COMM_WORLD); //?!?
+
+  for(uint64_t epoch = 1; epoch < iterations+1; epoch++) {
     // 1. pack surface
     pack_surface_simple(in, surface_data_out, N); // local -> surface_data_out[]
 
     // 2. signal data availability
-    uint64_t one = 1;
     for(int i = 0; i < 6; i++) {
       res = MPI_Accumulate(&one, 1, MPI_UINT64_T, neighbors[i],
                            remote_offset[i], 1,
@@ -116,12 +120,12 @@ int main(int argc, char **argv) {
       assert(res == 0);
     }
 
+
     res = MPI_Win_flush_all(counter_win);
     assert(res == 0);
 
     // 3. wait for data availability from neighbors
     // is that legal? atomic read? ordering for atomicity in MPI?
-    uint64_t sum = 0;
     bool have_data = false;
     while(!have_data) {
       have_data = (counter_baseptr[0] == epoch) && (counter_baseptr[1] == epoch) &&
@@ -145,13 +149,31 @@ int main(int argc, char **argv) {
     res = MPI_Win_flush_all(data_win);
     assert(res == 0);
 
-    // 7. update surface
+    // 7. signal completion
+    for(int i = 0; i < 6; i++) {
+      res = MPI_Accumulate(&one, 1, MPI_UINT64_T, neighbors[i],
+                           6+remote_offset[i], 1,
+                           MPI_UINT64_T, MPI_SUM, counter_win);
+      assert(res == 0);
+    }
+
+    res = MPI_Win_flush_all(counter_win);
+    assert(res == 0);
+
+    // 8. update surface
     copy_in_neighbors_data_simple(in, surface_data_in, N);
     update_surface_simple(out, in, N);
 
+    // 9. wait for completion
+    have_data = false;
+    while(!have_data) {
+      have_data = (counter_baseptr[6] == epoch) && (counter_baseptr[7] == epoch) &&
+        (counter_baseptr[8] == epoch) && (counter_baseptr[9] == epoch) &&
+        (counter_baseptr[10] == epoch) && (counter_baseptr[11] == epoch);
+    }
+
     // 8. swap in and out
     swap(in, out);
-
   }
 
   // unlock
@@ -161,7 +183,6 @@ int main(int argc, char **argv) {
   double stop = omp_get_wtime();
 
   verify_result_simple(in, iterations, rank, N);
-
 
   // cleanup
   my_free(in);
