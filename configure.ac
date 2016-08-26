@@ -48,6 +48,31 @@ AC_CACHE_CHECK([whether compiler is intel],
                             [me_cv_intel=yes],
                             [me_cv_intel=no])])
 
+
+AC_CACHE_CHECK([whether compiler is gnu],
+              [me_cv_gnu],
+              [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],
+                                                  [
+#ifndef __GNUC__
+  int fail[-1];
+#endif
+])],
+                            [me_cv_gnu=yes],
+                            [me_cv_gnu=no])])
+
+
+AC_CACHE_CHECK([whether compiler is clang],
+              [me_cv_clang],
+              [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],
+                                                  [
+#ifndef __clang__
+  int fail[-1];
+#endif
+])],
+                            [me_cv_clang=yes],
+                            [me_cv_clang=no])])
+
+
 if test "x${me_cv_cray}" = "xyes" ; then
   CXXFLAGS="${CXXFLAGS} -h std=c++11"
 elif test "x${me_cv_intel}" = "xyes" ; then
