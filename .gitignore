@@ -8,3 +8,4 @@ config.h
 conftest.cpp
 conftest.er1
 Makefile
+*.o
