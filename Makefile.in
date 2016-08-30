@@ -12,16 +12,41 @@ else
   NVC=@
 endif
 
-all: cart-pscw-bug.x cart-active-fence.x cart-active-pscw.x cart-immediate-msg.x cart-passive-counter.x
+NOOMP=cart-pscw-bug.x cart-active-fence.x cart-active-fence-shmem.x cart-active-pscw.x cart-immediate-msg.x cart-passive-counter.x
+OMP=cart-active-fence-openmp.x
 
-%.x: %.o simple.o my-malloc.o
+all: $(NOOMP) $(OMP)
+
+%.x: %.o simple.o my-malloc.o shmem.o
 	$(NVC)echo -e "\e[0;33mCreating $@\033[39m"
-	$(VC)$(LD) $(LDFLAGS) $? -o $@
+	$(VC)$(LD) $(LDFLAGS) $^ -o $@
+
+cart-active-fence-openmp.x: cart-active-fence-openmp.o simple-openmp.o my-malloc.o
+	$(NVC)echo -e "\e[0;33mCreating $@\033[39m"
+	$(VC)$(LD) $(LDFLAGS) $^ -o $@
 
 .cpp.o: Makefile
 	$(NVC)echo -e "\e[0;32mCompiling" $< "\033[39m"
 	$(VC)$(CXX) $(CXXFLAGS) -c $< -o $@
 
+simple-openmp.o: simple.cpp Makefile
+	$(NVC)echo -e "\e[0;32mCompiling" $< "\033[39m"
+	$(VC)$(CXX) $(CXXFLAGS) -DWITH_OPENMP -c $< -o $@
+
+shmem-openmp.o: shmem.cpp Makefile
+	$(NVC)echo -e "\e[0;32mCompiling" $< "\033[39m"
+	$(VC)$(CXX) $(CXXFLAGS) -DWITH_OPENMP -c $< -o $@
+
+cart-active-fence-openmp.o: cart-active-fence.cpp Makefile
+	$(NVC)echo -e "\e[0;32mCompiling" $< "\033[39m"
+	$(VC)$(CXX) $(CXXFLAGS) -DWITH_OPENMP -c $< -o $@
+
 clean:
 	@-rm -rf $(shell find . -type f -name '*.o')
 	@-rm -f *.x
+	@-rm -f *~
+
+beautify:
+	@clang-format -style=file -i *.[hc]pp
+
+.PHONY: all clean beautify
