@@ -9,6 +9,7 @@
 
 #include "my-malloc.hpp"
 #include "simple.hpp"
+#include "openmp.hpp"
 
 int iterations = 1000;
 
@@ -88,15 +89,21 @@ int main(int argc, char** argv) {
     surface_data_in[i] = baseptr + i * N * N;
 
   double start = omp_get_wtime();
+  PARALLEL()
   for (int epoch = 1; epoch < iterations + 1; epoch++) {
     // 1. open exposure and access epoch
+    MASTER
+      {
     res = MPI_Win_fence(0 /*assert*/, data_win); //@todo
     assert(res == 0);
+      }
+    BARRIER
 
     // 2. pack surface
     pack_surface_simple(in, surface_data_out, N); // local -> surface_data_out[]
 
     // 3. puts into neigboring nodes
+    MASTER
     for (int i = 0; i < 6; i++) {
       res = MPI_Put(surface_data_out[i], N * N, MPI_DOUBLE, neighbors[i],
                     remote_offset[i] * (N * N), N * N, MPI_DOUBLE, data_win);
@@ -107,14 +114,19 @@ int main(int argc, char** argv) {
     update_local_grid_simple(out, in, N);
 
     // 5. close exposure and access epoch
-    res = MPI_Win_fence(0 /*assert*/, data_win); //@todo
-    assert(res == 0);
+    MASTER
+      {
+	res = MPI_Win_fence(0 /*assert*/, data_win); //@todo
+	assert(res == 0);
+      }
+    BARRIER
 
     // 7. update surface
     copy_in_neighbors_data_simple(in, surface_data_in, N);
     update_surface_simple(out, in, N);
 
     // 8. swap in and out
+    MASTER
     swap(in, out);
   }
   double stop = omp_get_wtime();
