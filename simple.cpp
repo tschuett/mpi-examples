@@ -1,4 +1,6 @@
 #include "simple.hpp"
+#include "config.h"
+#include "openmp.hpp"
 
 #include <mpi.h>
 
@@ -16,39 +18,45 @@ void pack_surface_simple(const double* in, double* surface_data_out[6], int N) {
     pack_surface_simple(in, surface_data_out[i], i, N);
 }
 
-void pack_surface_simple(const double* in, double* surface_data_out, int i,
-                         int N) {
+void pack_surface_simple(const double* restrict in,
+                         double* restrict surface_data_out, int i, int N) {
   switch (i) {
   case 0: // xplus
+    FOR(collapse(2) simd)
     for (int y = 1; y < N + 1; y++)
       for (int z = 1; z < N + 1; z++) {
         SURFACE(surface_data_out, y - 1, z - 1) = IN(N, y, z);
       }
     break;
   case 1: // xminus
+    FOR(collapse(2) simd)
     for (int y = 1; y < N + 1; y++)
       for (int z = 1; z < N + 1; z++) {
         SURFACE(surface_data_out, y - 1, z - 1) = IN(1, y, z);
       }
     break;
   case 2: // yplus
+    FOR(collapse(2) simd)
     for (int x = 1; x < N + 1; x++)
       for (int z = 1; z < N + 1; z++) {
         SURFACE(surface_data_out, x - 1, z - 1) = IN(x, N, z);
       }
     break;
   case 3: // yminus
+    FOR(collapse(2) simd)
     for (int x = 1; x < N + 1; x++)
       for (int z = 1; z < N + 1; z++) {
         SURFACE(surface_data_out, x - 1, z - 1) = IN(x, 1, z);
       }
     break;
   case 4: // zplus
+    FOR(collapse(2) simd)
     for (int x = 1; x < N + 1; x++)
       for (int y = 1; y < N + 1; y++) {
         SURFACE(surface_data_out, x - 1, y - 1) = IN(x, y, N);
       }
   case 5: // zminus
+    FOR(collapse(2) simd)
     for (int x = 1; x < N + 1; x++)
       for (int y = 1; y < N + 1; y++) {
         SURFACE(surface_data_out, x - 1, y - 1) = IN(x, y, 1);
@@ -57,7 +65,9 @@ void pack_surface_simple(const double* in, double* surface_data_out, int i,
   }
 }
 
-void update_local_grid_simple(double* out, const double* in, int N) {
+void update_local_grid_simple(double* restrict out, const double* restrict in,
+                              int N) {
+  FOR(collapse(3) simd)
   for (int x = 2; x < N; x++)
     for (int y = 2; y < N; y++)
       for (int z = 2; z < N; z++)
@@ -67,46 +77,53 @@ void update_local_grid_simple(double* out, const double* in, int N) {
                            6.0;
 }
 
-void copy_in_neighbors_data_simple(double* in, double* surface_data_in[6],
-                                   int N) {
+void copy_in_neighbors_data_simple(double* restrict in,
+                                   double* surface_data_in[6], int N) {
   for (int i = 0; i < 6; i++)
     copy_in_neighbors_data_simple(in, surface_data_in[i], i, N);
 }
 
-void copy_in_neighbors_data_simple(double* in, double* surface_data_in, int i,
+void copy_in_neighbors_data_simple(double* restrict in,
+                                   double* restrict surface_data_in, int i,
                                    int N) {
   switch (i) {
   case 0: // xplus
+    FOR(collapse(2) simd)
     for (int y = 1; y < N + 1; y++)
       for (int z = 1; z < N + 1; z++) {
         IN(N + 1, y, z) = SURFACE(surface_data_in, y - 1, z - 1);
       }
     break;
   case 1: // xminus
+    FOR(collapse(2) simd)
     for (int y = 1; y < N + 1; y++)
       for (int z = 1; z < N + 1; z++) {
         IN(0, y, z) = SURFACE(surface_data_in, y - 1, z - 1);
       }
     break;
   case 2: // yplus
+    FOR(collapse(2) simd)
     for (int x = 1; x < N + 1; x++)
       for (int z = 1; z < N + 1; z++) {
         IN(x, N + 1, z) = SURFACE(surface_data_in, x - 1, z - 1);
       }
     break;
   case 3: // yminus
+    FOR(collapse(2) simd)
     for (int x = 1; x < N + 1; x++)
       for (int z = 1; z < N + 1; z++) {
         IN(x, 0, z) = SURFACE(surface_data_in, x - 1, z - 1);
       }
     break;
   case 4: // zplus
+    FOR(collapse(2) simd)
     for (int x = 1; x < N + 1; x++)
       for (int y = 1; y < N + 1; y++) {
         IN(x, y, N + 1) = SURFACE(surface_data_in, x - 1, y - 1);
       }
     break;
   case 5: // zminus
+    FOR(collapse(2) simd)
     for (int x = 1; x < N + 1; x++)
       for (int y = 1; y < N + 1; y++) {
         IN(x, y, 0) = SURFACE(surface_data_in, x - 1, y - 1);
@@ -115,14 +132,17 @@ void copy_in_neighbors_data_simple(double* in, double* surface_data_in, int i,
   }
 }
 
-void update_surface_simple(double* out, const double* in, int N) {
+void update_surface_simple(double* restrict out, const double* restrict in,
+                           int N) {
   for (int i = 0; i < 6; i++)
     update_surface_simple(out, in, i, N);
 }
 
-void update_surface_simple(double* out, const double* in, int i, int N) {
+void update_surface_simple(double* restrict out, const double* restrict in,
+                           int i, int N) {
   switch (i) {
   case 0: // xplus
+    FOR(collapse(2) simd)
     for (int y = 1; y < N + 1; y++)
       for (int z = 1; z < N + 1; z++) {
         int x = 1;
@@ -138,6 +158,7 @@ void update_surface_simple(double* out, const double* in, int i, int N) {
       }
     break;
   case 1: // xminus
+    FOR(collapse(2) simd)
     for (int y = 1; y < N + 1; y++)
       for (int z = 1; z < N + 1; z++) {
         int x = 1;
@@ -153,6 +174,7 @@ void update_surface_simple(double* out, const double* in, int i, int N) {
       }
     break;
   case 2: // yplus
+    FOR(collapse(2) simd)
     for (int x = 1; x < N + 1; x++)
       for (int z = 1; z < N + 1; z++) {
         int y = 1;
@@ -168,6 +190,7 @@ void update_surface_simple(double* out, const double* in, int i, int N) {
       }
     break;
   case 3: // yminus
+    FOR(collapse(2) simd)
     for (int x = 1; x < N + 1; x++)
       for (int z = 1; z < N + 1; z++) {
         int y = 1;
@@ -183,6 +206,7 @@ void update_surface_simple(double* out, const double* in, int i, int N) {
       }
     break;
   case 4: // zplus
+    FOR(collapse(2) simd)
     for (int x = 1; x < N + 1; x++)
       for (int y = 1; y < N + 1; y++) {
         int z = 1;
@@ -198,6 +222,7 @@ void update_surface_simple(double* out, const double* in, int i, int N) {
       }
     break;
   case 5: // zminus
+    FOR(collapse(2) simd)
     for (int x = 1; x < N + 1; x++)
       for (int y = 1; y < N + 1; y++) {
         int z = 1;
@@ -211,11 +236,12 @@ void update_surface_simple(double* out, const double* in, int i, int N) {
                         IN(x, y + 1, z) + IN(x, y, z - 1) + IN(x, y, z + 1)) /
                            6.0;
       }
-  break;
+    break;
   }
 }
 
-void verify_result_simple(double* in, int iterations, int rank, int N) {
+void verify_result_simple(double* restrict in, int iterations, int rank,
+                          int N) {
   double sum = 0;
   double global_sum = 0.0;
   size_t errors = 0;
