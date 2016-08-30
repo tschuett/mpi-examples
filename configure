@@ -586,6 +586,7 @@ PACKAGE_URL=''
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+PASSIVE_QTHREADS
 HAVE_CXX11
 ac_ct_CC
 CFLAGS
@@ -2678,6 +2679,54 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for C/C++ restrict keyword" >&5
+$as_echo_n "checking for C/C++ restrict keyword... " >&6; }
+if ${ac_cv_c_restrict+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_cv_c_restrict=no
+   # The order here caters to the fact that C++ does not require restrict.
+   for ac_kw in __restrict __restrict__ _Restrict restrict; do
+     cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+typedef int * int_ptr;
+	int foo (int_ptr $ac_kw ip) {
+	return ip[0];
+       }
+int
+main ()
+{
+int s[1];
+	int * $ac_kw t = s;
+	t[0] = 0;
+	return foo(t)
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_compile "$LINENO"; then :
+  ac_cv_c_restrict=$ac_kw
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
+     test "$ac_cv_c_restrict" != no && break
+   done
+
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_c_restrict" >&5
+$as_echo "$ac_cv_c_restrict" >&6; }
+
+ case $ac_cv_c_restrict in
+   restrict) ;;
+   no) $as_echo "#define restrict /**/" >>confdefs.h
+ ;;
+   *)  cat >>confdefs.h <<_ACEOF
+#define restrict $ac_cv_c_restrict
+_ACEOF
+ ;;
+ esac
+
+
+
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing hbw_check_available" >&5
 $as_echo_n "checking for library containing hbw_check_available... " >&6; }
 if ${ac_cv_search_hbw_check_available+:} false; then :
@@ -2738,7 +2787,71 @@ fi
 if test "x${ac_cv_search_hbw_check_available}" != "xno"; then
    $as_echo "#define HAVE_MEMKIND 1" >>confdefs.h
 
-   LDFLAGS="${LDFLAGS} $ac_cv_search_hbw_check_available"
+fi
+
+
+PASSIVE_QTHREADS=''
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for library containing qthread_initialize" >&5
+$as_echo_n "checking for library containing qthread_initialize... " >&6; }
+if ${ac_cv_search_qthread_initialize+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_func_search_save_LIBS=$LIBS
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char qthread_initialize ();
+int
+main ()
+{
+return qthread_initialize ();
+  ;
+  return 0;
+}
+_ACEOF
+for ac_lib in '' qthread; do
+  if test -z "$ac_lib"; then
+    ac_res="none required"
+  else
+    ac_res=-l$ac_lib
+    LIBS="-l$ac_lib  $ac_func_search_save_LIBS"
+  fi
+  if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_search_qthread_initialize=$ac_res
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext
+  if ${ac_cv_search_qthread_initialize+:} false; then :
+  break
+fi
+done
+if ${ac_cv_search_qthread_initialize+:} false; then :
+
+else
+  ac_cv_search_qthread_initialize=no
+fi
+rm conftest.$ac_ext
+LIBS=$ac_func_search_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_search_qthread_initialize" >&5
+$as_echo "$ac_cv_search_qthread_initialize" >&6; }
+ac_res=$ac_cv_search_qthread_initialize
+if test "$ac_res" != no; then :
+  test "$ac_res" = "none required" || LIBS="$ac_res $LIBS"
+
+fi
+
+
+if test "x${ac_cv_search_qthread_initialize}" != "xno"; then
+   $as_echo "#define HAVE_QTHREAD 1" >>confdefs.h
+
+   PASSIVE_QTHREADS='cart-passive-qthreads.x'
 fi
 
 cray_prgenv_wrapper=""
@@ -3069,6 +3182,10 @@ $as_echo "#define HAVE_CXX11 1" >>confdefs.h
 
 
   fi
+
+
+
+LDFLAGS="${LDFLAGS} ${LIBS}"
 
 
 

@@ -6,12 +6,24 @@ LDFLAGS=""
 AC_PROG_CXX([CC mpiCC])
 AC_PROG_CC([cc mpicc])
 
+AC_C_RESTRICT
+
+
 AC_SEARCH_LIBS([hbw_check_available], [memkind])
 dnl ac_cv_search_hbw_check_available=-lmemkind
 AH_TEMPLATE([HAVE_MEMKIND], [whether the memkind library is available])
 if test "x${ac_cv_search_hbw_check_available}" != "xno"; then
    AC_DEFINE(HAVE_MEMKIND)
-   LDFLAGS="${LDFLAGS} $ac_cv_search_hbw_check_available"
+fi
+
+
+PASSIVE_QTHREADS=''
+AC_SEARCH_LIBS([qthread_initialize], [qthread])
+dnl ac_cv_search_qthread_initialize=-lqthread
+AH_TEMPLATE([HAVE_QTHREAD], [whether the qthread library is available])
+if test "x${ac_cv_search_qthread_initialize}" != "xno"; then
+   AC_DEFINE(HAVE_QTHREAD)
+   PASSIVE_QTHREADS='cart-passive-qthreads.x'
 fi
 
 dnl check if a cray prgenv wrapper compiler is being used
@@ -89,9 +101,13 @@ fi
 
 AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 
+
+LDFLAGS="${LDFLAGS} ${LIBS}"
+
 AC_SUBST(CXX)
 AC_SUBST(CXXFLAGS)
 AC_SUBST([LDFLAGS])
+AC_SUBST([PASSIVE_QTHREADS])
 
 AC_CONFIG_HEADERS(config.h)
 AC_CONFIG_FILES(Makefile)
