@@ -3,8 +3,7 @@ AC_INIT(mpi-examples, 0.0.1+git, me@nowhere.com)
 
 LDFLAGS=""
 
-AC_PROG_CXX([CC mpiCC])
-AC_PROG_CC([cc mpicc])
+AX_PROG_CXX_MPI(true, [], AC_MSG_FAILURE([no mpi compiler found]))
 
 AC_C_RESTRICT
 
@@ -97,16 +96,21 @@ fi
 
 if test "x${cray_prgenv_wrapper}" = "xyes" ; then
   LDFLAGS="${LDFLAGS} -Wl,--whole-archive,-ldmapp,--no-whole-archive"
+  MTLDFLAGS="${LDFLAGS} -Wl,--whole-archive,-ldmapp,--no-whole-archive -craympich-mt"
+  else
+  MTLDFLAGS="${LDFLAGS}"
 fi
 
 AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 
 
 LDFLAGS="${LDFLAGS} ${LIBS}"
+MTLDFLAGS="${MTLDFLAGS} ${LIBS}"
 
 AC_SUBST(CXX)
 AC_SUBST(CXXFLAGS)
 AC_SUBST([LDFLAGS])
+AC_SUBST([MTLDFLAGS])
 AC_SUBST([PASSIVE_QTHREADS])
 
 AC_CONFIG_HEADERS(config.h)
