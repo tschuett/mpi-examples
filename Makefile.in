@@ -3,6 +3,7 @@ LD=@CXX@
 
 CXXFLAGS=@CXXFLAGS@
 LDFLAGS=@LDFLAGS@
+MTLDFLAGS=@MTLDFLAGS@
 
 ifeq ($(VERBOSE),1)
   VC=
@@ -14,12 +15,17 @@ endif
 
 NOOMP=cart-pscw-bug.x cart-active-fence.x cart-active-fence-shmem.x cart-active-pscw.x cart-immediate-msg.x cart-passive-counter.x
 OMP=cart-active-fence-openmp.x
+MT=
 
-all: $(NOOMP) $(OMP)
+all: $(NOOMP) $(OMP) $(MT) checker.x
 
 %.x: %.o simple.o my-malloc.o shmem.o
 	$(NVC)echo -e "\e[0;33mCreating $@\033[39m"
 	$(VC)$(LD) $(LDFLAGS) $^ -o $@
+
+checker.x: checker.o
+	$(NVC)echo -e "\e[0;33mCreating $@\033[39m"
+	$(VC)$(LD) $(MTLDFLAGS) $^ -o $@
 
 cart-active-fence-openmp.x: cart-active-fence-openmp.o simple-openmp.o my-malloc.o
 	$(NVC)echo -e "\e[0;33mCreating $@\033[39m"
