@@ -1,4 +1,6 @@
-#define _GNU_SOURCE
+//#define _GNU_SOURCE
+#include "config.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -90,7 +92,8 @@ int knl_mode(char *numa, char *mcdram, size_t n) {
       return -1;
 }
 
-int main(int argc, char **argv) {
+#ifdef HAVE_CRAY
+void print_mode() {
   char numa[32];
   char mcdram[32];
   char hostname[32];
@@ -98,15 +101,23 @@ int main(int argc, char **argv) {
   memset(numa, 0, sizeof(numa));
   memset(mcdram, 0, sizeof(mcdram));
 
-  int res = knl_mode(numa, mcdram, sizeof(numa));
-  if(res != 0)
-    return 1;
+  if(access("/proc/cray_xt/cname", F_OK) == 0 && access("/.hwinfo.cray", F_OK) == 0) {  
+    int res0 = knl_mode(numa, mcdram, sizeof(numa));
+    if(res != 0)
+      return 1;
 
-  res = gethostname(hostname, sizeof(hostname));
-  if(res != 0)
-    return 1;
-
-  printf("%s: NUMA: %s     MCDRAM: %s\n", hostname, numa, mcdram);
-
-  return 0;
+    int res1 = gethostname(hostname, sizeof(hostname));
+    if(res0 == 0 && res1 == 0)
+      printf("%s: NUMA: %s     MCDRAM: %s\n", hostname, numa, mcdram);
+  }
 }
+
+void check_mode() {
+}
+#else
+void print_mode() {
+}
+
+void check_mode() {
+}
+#endif
