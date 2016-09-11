@@ -1873,9 +1873,6 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 LDFLAGS=""
 
-#AC_PROG_CXX([CC mpiCC])
-#AC_PROG_CC([cc mpicc])
-
 
 
 
@@ -3338,11 +3335,14 @@ if test "x${ac_cv_search_qthread_initialize}" != "xno"; then
    PASSIVE_QTHREADS='cart-passive-qthreads.x'
 fi
 
+
 cray_prgenv_wrapper=""
 if test "x${PE_ENV}" != "x" ; then
   case "${CC}" in
     CC|cc)
-	cray_prgenv_wrapper="yes"
+    $as_echo "#define HAVE_CRAY 1" >>confdefs.h
+
+    cray_prgenv_wrapper="yes"
 	;;
     *)
        ;;

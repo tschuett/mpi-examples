@@ -26,11 +26,13 @@ if test "x${ac_cv_search_qthread_initialize}" != "xno"; then
 fi
 
 dnl check if a cray prgenv wrapper compiler is being used
+AH_TEMPLATE([HAVE_CRAY], [whether the cray prgenv wrapper is available])
 cray_prgenv_wrapper=""
 if test "x${PE_ENV}" != "x" ; then
   case "${CC}" in
     CC|cc)
-	cray_prgenv_wrapper="yes"
+    AC_DEFINE(HAVE_CRAY)
+    cray_prgenv_wrapper="yes"
 	;;
     *)
        ;;
