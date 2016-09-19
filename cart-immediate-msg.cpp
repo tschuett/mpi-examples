@@ -27,12 +27,12 @@ int main(int argc, char** argv) {
   double* in = nullptr;  // input grid
   double* out = nullptr; // output grid
   // requests for irecv and isend
-  MPI_Request irecv_requests[12] = {
-      MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL,
-      MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL};
-  MPI_Request isend_requests[12] = {
-      MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL,
-      MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL};
+  MPI_Request irecv_requests[12] = {MPI_REQUEST_NULL, MPI_REQUEST_NULL,
+                                    MPI_REQUEST_NULL, MPI_REQUEST_NULL,
+                                    MPI_REQUEST_NULL, MPI_REQUEST_NULL};
+  MPI_Request isend_requests[12] = {MPI_REQUEST_NULL, MPI_REQUEST_NULL,
+                                    MPI_REQUEST_NULL, MPI_REQUEST_NULL,
+                                    MPI_REQUEST_NULL, MPI_REQUEST_NULL};
   MPI_Init(&argc, &argv);
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
