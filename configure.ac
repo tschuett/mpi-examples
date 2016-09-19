@@ -3,7 +3,8 @@ AC_INIT(mpi-examples, 0.0.1+git, me@nowhere.com)
 
 LDFLAGS=""
 
-AX_PROG_CXX_MPI(true, [], AC_MSG_FAILURE([no mpi compiler found]))
+AX_PROG_CC_MPI(true, [], AC_MSG_FAILURE([no c mpi compiler found]))
+AX_PROG_CXX_MPI(true, [], AC_MSG_FAILURE([no c++ mpi compiler found]))
 
 AC_C_RESTRICT
 
@@ -66,6 +67,12 @@ AC_CACHE_CHECK([whether compiler is gnu],
               [me_cv_gnu],
               [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([],
                                                   [
+#ifdef _CRAYC
+  int fail[-1];
+#endif
+#ifdef __INTEL_COMPILER
+  int fail[-1];
+  #endif
 #ifndef __GNUC__
   int fail[-1];
 #endif
@@ -98,21 +105,16 @@ fi
 
 if test "x${cray_prgenv_wrapper}" = "xyes" ; then
   LDFLAGS="${LDFLAGS} -Wl,--whole-archive,-ldmapp,--no-whole-archive"
-  MTLDFLAGS="${LDFLAGS} -Wl,--whole-archive,-ldmapp,--no-whole-archive -craympich-mt"
-  else
-  MTLDFLAGS="${LDFLAGS}"
 fi
 
 AX_CXX_COMPILE_STDCXX_11([noext],[mandatory])
 
 
 LDFLAGS="${LDFLAGS} ${LIBS}"
-MTLDFLAGS="${MTLDFLAGS} ${LIBS}"
 
 AC_SUBST(CXX)
 AC_SUBST(CXXFLAGS)
 AC_SUBST([LDFLAGS])
-AC_SUBST([MTLDFLAGS])
 AC_SUBST([PASSIVE_QTHREADS])
 
 AC_CONFIG_HEADERS(config.h)
