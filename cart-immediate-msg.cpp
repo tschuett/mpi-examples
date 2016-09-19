@@ -27,10 +27,12 @@ int main(int argc, char** argv) {
   double* in = nullptr;  // input grid
   double* out = nullptr; // output grid
   // requests for irecv and isend
-  MPI_Request requests[12] = {
-      MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL,
-      MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL,
-      MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL};
+  MPI_Request irecv_requests[12] = {
+      MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL,
+      MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL};
+  MPI_Request isend_requests[12] = {
+      MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL,
+      MPI_REQUEST_NULL, MPI_REQUEST_NULL, MPI_REQUEST_NULL};
   MPI_Init(&argc, &argv);
 
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -85,7 +87,7 @@ int main(int argc, char** argv) {
     // 1. post irecvs
     for (int i = 0; i < 6; i++) {
       res = MPI_Irecv(surface_data_in[i], N * N, MPI_DOUBLE, neighbors[i],
-                      MPI_ANY_TAG, comm_cart, &requests[i]);
+                      0 /*tag*/, comm_cart, &irecv_requests[i]);
       assert(res == 0);
     }
 
@@ -95,7 +97,7 @@ int main(int argc, char** argv) {
     // 3. post isends
     for (int i = 0; i < 6; i++) {
       res = MPI_Isend(surface_data_out[i], N * N, MPI_DOUBLE, neighbors[i],
-                      0 /*tag*/, comm_cart, &requests[6 + i]);
+                      0 /*tag*/, comm_cart, &isend_requests[i]);
       assert(res == 0);
     }
 
@@ -103,14 +105,18 @@ int main(int argc, char** argv) {
     update_local_grid_simple(out, in, N);
 
     // 5. wait for data availability from neighbors
-    res = MPI_Waitall(12, requests, MPI_STATUS_IGNORE);
+    res = MPI_Waitall(6, irecv_requests, MPI_STATUS_IGNORE);
     assert(res == 0);
 
     // 7. update surface
     copy_in_neighbors_data_simple(in, surface_data_in, N);
     update_surface_simple(out, in, N);
 
-    // 8. swap in and out
+    // 8. wait for isend communication to terminate
+    res = MPI_Waitall(6, isend_requests, MPI_STATUS_IGNORE);
+    assert(res == 0);
+
+    // 9. swap in and out
     swap(in, out);
   }
   double stop = omp_get_wtime();
