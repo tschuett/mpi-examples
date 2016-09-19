@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include <cassert>
+#include <cmath>
 #include <utility>
 
 #include "my-malloc.hpp"
@@ -35,8 +36,6 @@ int main(int argc, char** argv) {
       global_yminus, // neighbors in the global cartesian grid
       global_yplus, global_zminus, global_zplus;
   int N = 0;                   // size of the local grid N^3
-  double* in = nullptr;        // input grid
-  double* out = nullptr;       // output grid
   double* shmem_in = nullptr;  // input grid
   double* shmem_out = nullptr; // output grid
   MPI_Win data_win;            // window for global data exchange
@@ -160,7 +159,7 @@ int main(int argc, char** argv) {
   res = MPI_Cart_shift(comm_global_cart, 2, +1, &rank_source, &global_zplus);
   assert(res == 0);
 
-  int neighbors[] = {xplus, xminus, yplus, yminus, zplus, zminus};
+  int smp_neighbors[] = {xplus, xminus, yplus, yminus, zplus, zminus};
   int global_neighbors[] = {global_xplus,  global_xminus, global_yplus,
                             global_yminus, global_zplus,  global_zminus};
 
@@ -179,8 +178,9 @@ int main(int argc, char** argv) {
   memset(baseptr, 0, 6 * N * N * sizeof(double));
 
   // init shmem window
-  res = MPI_Win_allocate_shared(size_smp * 2 * (N + 2) * (N + 2) * (N + 2) *
-                                    sizeof(double),
+  size_t local_shmem_size =
+      2 * ceil(size_smp * (N + 2) * (N + 2) * (N + 2) / (float)size_smp);
+  res = MPI_Win_allocate_shared(local_shmem_size * sizeof(double),
                                 sizeof(double), MPI_INFO_NULL, comm_smp_cart,
                                 &local_shared_baseptr, &shared_win);
   assert(res == 0);
@@ -193,12 +193,8 @@ int main(int argc, char** argv) {
   shmem_in = shared_baseptr;
   shmem_out = shared_baseptr + size_smp * (N + 2) * (N + 2) * (N + 2);
 
-  // in and out are in the shmem_win
-  in = shmem_in + rank_smp * (N + 2) * (N + 2) * (N + 2);
-  out = shmem_out + rank_smp * (N + 2) * (N + 2) * (N + 2);
-
-  memset(in, 0, (N + 2) * (N + 2) * (N + 2) * sizeof(double));
-  memset(out, 0, (N + 2) * (N + 2) * (N + 2) * sizeof(double));
+  memset_shmem(shmem_in, N, coords_smp, dims_smp);
+  memset_shmem(shmem_out, N, coords_smp, dims_smp);
 
   // data input comes from the window
   for (int i = 0; i < 6; i++)
@@ -212,13 +208,13 @@ int main(int argc, char** argv) {
 
     // 2. pack surface
     for (int i = 0; i < 6; i++)
-      if (neighbors[i] == MPI_PROC_NULL)
-        pack_surface_simple(in, surface_data_out[i], i,
-                            N); // local -> surface_data_out[i]
+      if (smp_neighbors[i] == MPI_PROC_NULL)
+        pack_surface_shmem(shmem_in, surface_data_out[i], i, N, coords_smp,
+                           dims_smp); // local -> surface_data_out[i]
 
     // 3. puts into neigboring nodes
     for (int i = 0; i < 6; i++) {
-      if (neighbors[i] == MPI_PROC_NULL) {
+      if (smp_neighbors[i] == MPI_PROC_NULL) {
         res =
             MPI_Put(surface_data_out[i], N * N, MPI_DOUBLE, global_neighbors[i],
                     remote_offset[i] * (N * N), N * N, MPI_DOUBLE, data_win);
@@ -227,11 +223,12 @@ int main(int argc, char** argv) {
     }
 
     // 4. update local grid
-    update_local_grid_simple(out, in, N);
+    update_local_grid_shmem(shmem_out, shmem_in, N, coords_smp, dims_smp,
+                            smp_neighbors);
     // @todo move computation here
     // for (int i = 0; i < 6; i++)
-    //  if (neighbors[i] != MPI_PROC_NULL)
-    //    update_local_grid_shmem(out, in, shmem_in, neighbors[i], N);
+    //  if (smp_neighbors[i] != MPI_PROC_NULL)
+    //    update_local_grid_shmem(out, in, shmem_in, smp_neighbors[i], N);
 
     // 5. close exposure and access epoch
     res = MPI_Win_fence(0 /*assert*/, data_win); //@todo
@@ -239,20 +236,18 @@ int main(int argc, char** argv) {
 
     // 7. update surface
     for (int i = 0; i < 6; i++) {
-      if (neighbors[i] == MPI_PROC_NULL)
-        copy_in_neighbors_data_simple(in, surface_data_in[i], i, N);
-      else
-        copy_in_neighbors_data_shmem(in, shmem_in, neighbors[i], i, N);
-      update_surface_simple(out, in, i, N);
+      if (smp_neighbors[i] != MPI_PROC_NULL)
+        copy_in_neighbors_data_shmem(shmem_in, surface_data_in[i], i, N,
+                                     coords_smp, dims_smp);
+      update_surface_shmem(shmem_out, shmem_in, i, N, coords_smp, dims_smp);
     }
 
     // 8. swap in and out
-    swap(in, out);
     swap(shmem_in, shmem_out);
   }
   double stop = omp_get_wtime();
 
-  verify_result_simple(in, iterations, rank, N);
+  verify_result_shmem(shmem_in, iterations, rank, N, coords_smp, dims_smp);
 
   // cleanup
   for (int i = 0; i < 6; i++)
