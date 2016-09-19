@@ -12,7 +12,7 @@
 #ifdef HAVE_MEMKIND
 void* my_malloc(size_t bytes) {
   void* buffer = nullptr;
-  if (hbw_check_available()) {
+  if (hbw_check_available() == 0) {
     int res = hbw_posix_memalign_psize(&buffer, 2 * 1024 * 1024ULL, bytes,
                                        HBW_PAGESIZE_2MB);
     if (res == 0)
