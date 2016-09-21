@@ -13,29 +13,28 @@ else
   NVC=@
 endif
 
-NOOMP=cart-pscw-bug.x cart-active-fence.x cart-active-fence-shmem.x cart-active-pscw.x cart-immediate-msg.x cart-passive-counter.x
+NOOMP=cart-pscw-bug.x cart-active-fence.x cart-active-fence-shmem.x cart-active-pscw.x cart-immediate-msg.x cart-passive-counter.x cart-shmem-counter.x
 OMP=cart-active-fence-openmp.x
-MT=
 
-all: $(NOOMP) $(OMP) $(MT) checker.x
+all: $(NOOMP) $(OMP) checker.x
 
-%.x: %.o simple.o my-malloc.o shmem.o knl.c config.h
+%.x: %.o simple.o my-malloc.o shmem.o knl.c
 	$(NVC)echo -e "\e[0;33mCreating $@\033[39m"
 	$(VC)$(LD) $(LDFLAGS) $^ -o $@
 
 checker.x: checker.o
 	$(NVC)echo -e "\e[0;33mCreating $@\033[39m"
-	$(VC)$(LD) $(MTLDFLAGS) $^ -o $@
+	$(VC)$(LD) $(LDFLAGS) $^ -o $@
 
 cart-active-fence-openmp.x: cart-active-fence-openmp.o simple-openmp.o my-malloc.o
 	$(NVC)echo -e "\e[0;33mCreating $@\033[39m"
 	$(VC)$(LD) $(LDFLAGS) $^ -o $@
 
-.cpp.o: Makefile config.h
+.cpp.o: Makefile
 	$(NVC)echo -e "\e[0;32mCompiling" $< "\033[39m"
 	$(VC)$(CXX) $(CXXFLAGS) -c $< -o $@
 
-.c.o: Makefile config.h
+.c.o: Makefile
 	$(NVC)echo -e "\e[0;32mCompiling" $< "\033[39m"
 	$(VC)$(CC) $(CFLAGS) -c $< -o $@
 
