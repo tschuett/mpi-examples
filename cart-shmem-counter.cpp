@@ -1,11 +1,13 @@
 #include <mpi.h>
+#include <mpp/shmem.h>
+#include <omp.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include <cassert>
-#include <chrono>
 #include <cstdint>
+#include <cstdio>
 #include <utility>
 
 #include "my-malloc.hpp"
@@ -29,16 +31,19 @@ int main(int argc, char** argv) {
   int N = 0;                 // size of the local grid N^3
   double* in = nullptr;      // input grid
   double* out = nullptr;     // output grid
-  MPI_Win data_win;          // window for data exchange
   double* baseptr = nullptr; // base pointer of the data window
-  MPI_Win counter_win;       // window for counters
-  volatile uint64_t* counter_baseptr =
+  volatile long long* counter_baseptr =
       nullptr; // base pointer of the counter window
+  MPI_Group world_group;
+  MPI_Group cart_group;
+  int neighbors[6];
+  int remote_offset[] = {1, 0, 3, 2, 5, 4};
 
   MPI_Init(&argc, &argv);
+  shmem_init();
 
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  rank = shmem_my_pe();
+  size = shmem_n_pes();
 
   parse_argv_simple(argc, argv, rank, N, iterations);
 
@@ -49,7 +54,7 @@ int main(int argc, char** argv) {
   if (rank == 0)
     printf("dims : %dx%dx%d\n", dims[0], dims[1], dims[2]);
 
-  res = MPI_Cart_create(MPI_COMM_WORLD, 3, dims, periods, 0, &comm_cart);
+  res = MPI_Cart_create(MPI_COMM_WORLD, 3, dims, periods, true, &comm_cart);
   assert(comm_cart != MPI_COMM_NULL);
   assert(res == 0);
 
@@ -67,9 +72,15 @@ int main(int argc, char** argv) {
   res = MPI_Cart_shift(comm_cart, 2, +1, &rank_source, &zplus);
   assert(res == 0);
 
-  int neighbors[] = {xplus, xminus, yplus, yminus, zplus, zminus};
+  int cart_neighbors[] = {xplus, xminus, yplus, yminus, zplus, zminus};
 
-  int remote_offset[] = {1, 0, 3, 2, 5, 4};
+  res = MPI_Comm_group(MPI_COMM_WORLD, &world_group);
+  assert(res == 0);
+  res = MPI_Comm_group(comm_cart, &cart_group);
+  assert(res == 0);
+  res = MPI_Group_translate_ranks(cart_group, 6, cart_neighbors, world_group,
+                                  neighbors);
+  assert(res == 0);
 
   // init data
   for (int i = 0; i < 6; i++) {
@@ -84,43 +95,33 @@ int main(int argc, char** argv) {
   memset(out, 0, (N + 2) * (N + 2) * (N + 2) * sizeof(double));
 
   // data window
-  res = MPI_Win_allocate(6 * N * N * sizeof(double), sizeof(double),
-                         MPI_INFO_NULL, comm_cart, &baseptr, &data_win);
-  assert(res == 0);
+  baseptr = (double*)shmem_malloc(6 * N * N * sizeof(double));
+  assert(baseptr != nullptr);
   memset(baseptr, 0, 6 * N * N * sizeof(double));
 
   // create counter window
-  res = MPI_Win_allocate(12 * sizeof(uint64_t), sizeof(uint64_t), MPI_INFO_NULL,
-                         comm_cart, &counter_baseptr, &counter_win);
-  assert(res == 0);
+  counter_baseptr = (long long*)shmem_malloc(12 * sizeof(long long));
+  assert(counter_baseptr != nullptr);
   memset((void*)counter_baseptr, 0, 12 * sizeof(uint64_t));
 
   // data output goes into the window
   for (int i = 0; i < 6; i++)
     surface_data_out[i] = baseptr + i * N * N;
 
-  auto start = std::chrono::high_resolution_clock::now();
+  double start = omp_get_wtime();
 
-  // lock
-  MPI_Win_lock_all(MPI_MODE_NOCHECK, data_win);
-  MPI_Win_lock_all(MPI_MODE_NOCHECK, counter_win);
-
-  MPI_Barrier(MPI_COMM_WORLD); //?!?
+  shmem_barrier_all();
 
   for (uint64_t epoch = 1; epoch < iterations + 1; epoch++) {
     // 1. pack surface
     pack_surface_simple(in, surface_data_out, N); // local -> surface_data_out[]
 
     // 2. signal data availability
-    for (int i = 0; i < 6; i++) {
-      res =
-          MPI_Accumulate(&one, 1, MPI_UINT64_T, neighbors[i], remote_offset[i],
-                         1, MPI_UINT64_T, MPI_SUM, counter_win);
-      assert(res == 0);
-    }
+    for (int i = 0; i < 6; i++)
+      shmem_longlong_add((long long*)counter_baseptr + remote_offset[i], 1,
+                         neighbors[i]);
 
-    res = MPI_Win_flush_all(counter_win);
-    assert(res == 0);
+    shmem_quiet(); //?
 
     // 3. wait for data availability from neighbors
     // is that legal? atomic read? ordering for atomicity in MPI?
@@ -134,8 +135,9 @@ int main(int argc, char** argv) {
 
     // 4. get data from neighbors
     for (int i = 0; i < 6; i++) {
-      res = MPI_Get(surface_data_in[i], N * N, MPI_DOUBLE, neighbors[i],
-                    remote_offset[i] * N * N, N * N, MPI_DOUBLE, data_win);
+      shmem_double_get_nbi(surface_data_in[i],
+                           baseptr + remote_offset[i] * N * N, N * N,
+                           neighbors[i]);
       assert(res == 0);
     }
 
@@ -143,19 +145,14 @@ int main(int argc, char** argv) {
     update_local_grid_simple(out, in, N);
 
     // 6. wait for neigbor's data
-    res = MPI_Win_flush_all(data_win);
-    assert(res == 0);
+    shmem_quiet();
 
     // 7. signal completion
-    for (int i = 0; i < 6; i++) {
-      res = MPI_Accumulate(&one, 1, MPI_UINT64_T, neighbors[i],
-                           6 + remote_offset[i], 1, MPI_UINT64_T, MPI_SUM,
-                           counter_win);
-      assert(res == 0);
-    }
+    for (int i = 0; i < 6; i++)
+      shmem_longlong_add((long long*)counter_baseptr + 6 + remote_offset[i], 1,
+                         neighbors[i]);
 
-    res = MPI_Win_flush_all(counter_win);
-    assert(res == 0);
+    shmem_quiet();
 
     // 8. update surface
     copy_in_neighbors_data_simple(in, surface_data_in, N);
@@ -174,11 +171,7 @@ int main(int argc, char** argv) {
     swap(in, out);
   }
 
-  // unlock
-  MPI_Win_unlock_all(counter_win);
-  MPI_Win_unlock_all(data_win);
-
-  auto stop = std::chrono::high_resolution_clock::now();
+  double stop = omp_get_wtime();
 
   verify_result_simple(in, iterations, rank, N);
 
@@ -187,11 +180,10 @@ int main(int argc, char** argv) {
   my_free(out);
   for (int i = 0; i < 6; i++)
     my_free(surface_data_in[i]);
-  MPI_Win_free(&data_win);
-  MPI_Win_free(&counter_win);
+  // shmem_free(&baseptr);
+  // shmem_free(&counter_baseptr);
 
-  const std::chrono::duration<double> diff = stop - start;
-  const double local_duration = diff.count();
+  double local_duration = stop - start;
   double max_duration;
   res = MPI_Reduce(&local_duration, &max_duration, 1, MPI_DOUBLE, MPI_MAX, 0,
                    MPI_COMM_WORLD);
@@ -199,6 +191,7 @@ int main(int argc, char** argv) {
 
   if (rank == 0)
     printf("time : %fs\n", max_duration);
+  shmem_finalize();
   MPI_Finalize();
   return 0;
 }

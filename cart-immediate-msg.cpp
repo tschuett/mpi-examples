@@ -1,10 +1,10 @@
 #include <mpi.h>
-#include <omp.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include <cassert>
+#include <chrono>
 #include <utility>
 
 #include "my-malloc.hpp"
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
   memset(in, 0, (N + 2) * (N + 2) * (N + 2) * sizeof(double));
   memset(out, 0, (N + 2) * (N + 2) * (N + 2) * sizeof(double));
 
-  double start = omp_get_wtime();
+  auto start = std::chrono::high_resolution_clock::now();
   for (int epoch = 1; epoch < iterations + 1; epoch++) {
     // 1. post irecvs
     for (int i = 0; i < 6; i++) {
@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
     // 9. swap in and out
     swap(in, out);
   }
-  double stop = omp_get_wtime();
+  auto stop = std::chrono::high_resolution_clock::now();
 
   verify_result_simple(in, iterations, rank, N);
 
@@ -131,7 +131,8 @@ int main(int argc, char** argv) {
     my_free(surface_data_in[i]);
   }
 
-  double local_duration = stop - start;
+  std::chrono::duration<double> diff = stop - start;
+  const double local_duration = diff.count();
   double max_duration;
   res = MPI_Reduce(&local_duration, &max_duration, 1, MPI_DOUBLE, MPI_MAX, 0,
                    MPI_COMM_WORLD);
