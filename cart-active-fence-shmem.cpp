@@ -46,6 +46,7 @@ int main(int argc, char** argv) {
 
   int dims_nodes[] = {0, 0, 0};
   int periods_nodes[] = {1, 1, 1};
+
   int dims_smp[] = {0, 0, 0};
   int periods_smp[] = {0, 0, 0}; // non-periodic
 
@@ -171,6 +172,7 @@ int main(int argc, char** argv) {
     memset(surface_data_out[i], 0, N * N * sizeof(double));
   }
 
+  // each rank can have up to 6 non-shmem neighbors
   res = MPI_Win_allocate(6 * N * N * sizeof(double), sizeof(double),
                          MPI_INFO_NULL, comm_global_cart, &baseptr, &data_win);
   assert(res == 0);
@@ -178,8 +180,12 @@ int main(int argc, char** argv) {
   memset(baseptr, 0, 6 * N * N * sizeof(double));
 
   // init shmem window
-  size_t local_shmem_size =
-      2 * ceil(size_smp * (N + 2) * (N + 2) * (N + 2) / (float)size_smp);
+  // we need two volumes: in and out
+  // the size of one volume is (2 + dims_smp[0]*N)*(2 +*N)*(2 +x*N)
+  size_t size_of_volume =
+      (2 + dims_smp[0] * N) * (2 + dims_smp[1] * N) * (2 + dims_smp[0] * N);
+  // all ranks have to provide the same value to allocate_shared
+  size_t local_shmem_size = ceil(size_of_volume / (double)size_smp);
   res = MPI_Win_allocate_shared(local_shmem_size * sizeof(double),
                                 sizeof(double), MPI_INFO_NULL, comm_smp_cart,
                                 &local_shared_baseptr, &shared_win);
@@ -237,8 +243,8 @@ int main(int argc, char** argv) {
     // 7. update surface
     for (int i = 0; i < 6; i++) {
       if (smp_neighbors[i] != MPI_PROC_NULL)
-        copy_in_neighbors_data_shmem(shmem_in, surface_data_in[i], i, N,
-                                     coords_smp, dims_smp);
+        copy_in_surface_data_shmem(shmem_in, surface_data_in[i], i, N,
+                                   coords_smp, dims_smp);
       update_surface_shmem(shmem_out, shmem_in, i, N, coords_smp, dims_smp);
     }
 

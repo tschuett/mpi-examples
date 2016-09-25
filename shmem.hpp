@@ -2,10 +2,10 @@
 
 #include <array>
 
-extern void copy_in_neighbors_data_shmem(double* in,
-                                         const double* surface_data_in, int i,
-                                         int N, const int* coords,
-                                         const int* dims);
+extern void copy_in_surface_data_shmem(double* in,
+                                       const double* surface_data_in, int i,
+                                       int N, const int* coords,
+                                       const int* dims);
 
 extern void parse_argv_shmem(int argc, char** argv, int rank, int& N,
                              int& iterations, int& rankspershmem);
