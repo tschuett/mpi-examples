@@ -164,7 +164,7 @@ AC_DEFUN([_AX_PROG_CC_MPI], [
     if test -z "$CC" && test -n "$MPICC"; then
       CC="$MPICC"
     else
-      AC_CHECK_TOOLS([CC], [cc mpicc mpixlc_r mpixlc hcc mpxlc_r mpxlc sxmpicc mpifcc mpgcc mpcc cmpicc cc gcc])
+      AC_CHECK_TOOLS([CC], [mpicc cc mpixlc_r mpixlc hcc mpxlc_r mpxlc sxmpicc mpifcc mpgcc mpcc cmpicc cc gcc])
     fi
   fi
   AC_PROG_CC
