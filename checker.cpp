@@ -40,7 +40,7 @@ n≥124    ≈⌊0.95n−0.427√n⌋   ≈⌈0.95n+1+0.427√n⌉  0.950
   lower_idx = get<1>(*it);
   upper_idx = get<2>(*it);
 
-  printf("%f %f %f\n", data[lower_idx], data[trunc(0.95 * n)], data[upper_idx]);
+  printf("%f %f %f\n", data[trunc(0.95 * n)], data[lower_idx], data[upper_idx]);
 
   return true;
 }
@@ -67,7 +67,7 @@ n≥71    ≈⌊0.50n−0.980√n⌋   ≈⌈0.50n+1+0.980√n⌉  0.950
   lower_idx = get<1>(*it);
   upper_idx = get<2>(*it);
 
-  printf("%f %f %f\n", data[lower_idx], data[trunc(n / 2)], data[upper_idx]);
+  printf("%f %f %f\n", data[trunc(n / 2)], data[lower_idx], data[upper_idx]);
 
   return true;
 }
@@ -85,29 +85,34 @@ n≥73   ≈⌊0.50n−1.288√n⌋   ≈⌈0.50n+1+1.288√n⌉  0.990
   if (n <= 7)
     return false;
   if (n >= 73) {
-    lower_idx = trunc(0.5 * n - 1.288 * sqrt(n))-1;
-    upper_idx = trunc(0.5 * n + 1 + 1.288 * sqrt(n))-1;
+    lower_idx = trunc(0.5 * n - 1.288 * sqrt(n)) - 1;
+    upper_idx = trunc(0.5 * n + 1 + 1.288 * sqrt(n)) - 1;
   }
   const auto it =
       find_if(table_50_99.begin(), table_50_99.end(),
               [n](tuple<int, int, int, double> t) { return get<0>(t) == n; });
-  lower_idx = get<1>(*it)-1;
-  upper_idx = get<2>(*it)-1;
+  lower_idx = get<1>(*it) - 1;
+  upper_idx = get<2>(*it) - 1;
 
-  printf("%f %f %f\n", data[lower_idx], data[trunc(n / 2)], data[upper_idx]);
+  printf("%f %f %f\n", data[trunc(n / 2)], data[lower_idx], data[upper_idx]);
 
   return true;
 }
 
+void quantile_50_min_max(const std::vector<double>& data) {
+  size_t n = data.size();
+
+  printf("%f %f %f\n", data[trunc(n / 2)], data.front(), data.back());
+}
 int main(int argc, char** argv) {
 
   vector<double> data;
 
-  if(argc != 2) {
+  if (argc != 2) {
     printf("usage: checker.x <input file>\n");
     exit(1);
   }
-  
+
   ifstream infile(argv[1]);
 
   double a;
@@ -118,8 +123,9 @@ int main(int argc, char** argv) {
   sort(data.begin(), data.end());
 
   quantile_50_confidence_95(data);
-  quantile_50_confidence_99(data);
-  quantile_95_confidence_95(data);
+  quantile_50_min_max(data);
+  // quantile_50_confidence_99(data);
+  // quantile_95_confidence_95(data);
 
   return 0;
 }
