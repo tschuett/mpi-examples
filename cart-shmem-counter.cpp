@@ -1,5 +1,5 @@
-#include <mpp/shmem.h>
 #include <mpi.h>
+#include <mpp/shmem.h>
 #include <omp.h>
 #include <stdlib.h>
 #include <string.h>
@@ -76,9 +76,10 @@ int main(int argc, char** argv) {
 
   res = MPI_Comm_group(MPI_COMM_WORLD, &world_group);
   assert(res == 0);
-  res =  MPI_Comm_group(comm_cart, &cart_group);
+  res = MPI_Comm_group(comm_cart, &cart_group);
   assert(res == 0);
-  res = MPI_Group_translate_ranks(cart_group, 6, cart_neighbors, world_group, neighbors);
+  res = MPI_Group_translate_ranks(cart_group, 6, cart_neighbors, world_group,
+                                  neighbors);
   assert(res == 0);
 
   // init data
@@ -94,12 +95,12 @@ int main(int argc, char** argv) {
   memset(out, 0, (N + 2) * (N + 2) * (N + 2) * sizeof(double));
 
   // data window
-  baseptr = (double *)shmem_malloc(6 * N * N * sizeof(double));
+  baseptr = (double*)shmem_malloc(6 * N * N * sizeof(double));
   assert(baseptr != nullptr);
   memset(baseptr, 0, 6 * N * N * sizeof(double));
 
   // create counter window
-  counter_baseptr = (long long *)shmem_malloc(12 * sizeof(long long));
+  counter_baseptr = (long long*)shmem_malloc(12 * sizeof(long long));
   assert(counter_baseptr != nullptr);
   memset((void*)counter_baseptr, 0, 12 * sizeof(uint64_t));
 
@@ -117,7 +118,8 @@ int main(int argc, char** argv) {
 
     // 2. signal data availability
     for (int i = 0; i < 6; i++)
-      shmem_longlong_add((long long *)counter_baseptr + remote_offset[i], 1, neighbors[i]);
+      shmem_longlong_add((long long*)counter_baseptr + remote_offset[i], 1,
+                         neighbors[i]);
 
     shmem_quiet(); //?
 
@@ -134,8 +136,7 @@ int main(int argc, char** argv) {
     // 4. get data from neighbors
     for (int i = 0; i < 6; i++) {
       shmem_double_get_nbi(surface_data_in[i],
-                           baseptr + remote_offset[i] * N * N,
-                           N * N,
+                           baseptr + remote_offset[i] * N * N, N * N,
                            neighbors[i]);
       assert(res == 0);
     }
@@ -148,7 +149,8 @@ int main(int argc, char** argv) {
 
     // 7. signal completion
     for (int i = 0; i < 6; i++)
-      shmem_longlong_add((long long *)counter_baseptr + 6 + remote_offset[i], 1, neighbors[i]);
+      shmem_longlong_add((long long*)counter_baseptr + 6 + remote_offset[i], 1,
+                         neighbors[i]);
 
     shmem_quiet();
 
@@ -178,8 +180,8 @@ int main(int argc, char** argv) {
   my_free(out);
   for (int i = 0; i < 6; i++)
     my_free(surface_data_in[i]);
-  //shmem_free(&baseptr);
-  //shmem_free(&counter_baseptr);
+  // shmem_free(&baseptr);
+  // shmem_free(&counter_baseptr);
 
   double local_duration = stop - start;
   double max_duration;
