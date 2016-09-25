@@ -1,10 +1,10 @@
 #include <mpi.h>
-#include <omp.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <utility>
 
@@ -23,9 +23,6 @@ int main(int argc, char** argv) {
   int rank, size; // rank and size in MPI_COMM_WORLD
   int rank_smp, size_smp, rank_nodes, size_nodes, rank_global;
   int size_smp_min, size_smp_max;
-  int dims[3] = {0, 0, 0};    // dimensions for MPI_Dims_create
-  int periods[3] = {1, 1, 1}; // periods for the cartesion grid
-  // MPI_Comm comm_cart;          // cartesian communicator
   MPI_Comm comm_nodes_flat, comm_smp_flat, comm_nodes_cart, comm_smp_cart,
       comm_global_flat, comm_global_cart;
   double* surface_data_out[6]; // surface pointer
@@ -200,7 +197,7 @@ int main(int argc, char** argv) {
   for (int i = 0; i < 6; i++)
     surface_data_in[i] = baseptr + i * N * N;
 
-  double start = omp_get_wtime();
+  auto start = std::chrono::high_resolution_clock::now();
   for (int epoch = 1; epoch < iterations + 1; epoch++) {
     // 1. open exposure and access epoch
     res = MPI_Win_fence(0 /*assert*/, data_win); //@todo
@@ -245,7 +242,7 @@ int main(int argc, char** argv) {
     // 8. swap in and out
     swap(shmem_in, shmem_out);
   }
-  double stop = omp_get_wtime();
+  auto stop = std::chrono::high_resolution_clock::now();
 
   verify_result_shmem(shmem_in, iterations, rank, N, coords_smp, dims_smp);
 
@@ -255,7 +252,8 @@ int main(int argc, char** argv) {
   MPI_Win_free(&data_win);
   MPI_Win_free(&shared_win);
 
-  double local_duration = stop - start;
+  const std::chrono::duration<double> diff = stop - start;
+  const double local_duration = diff.count();
   double max_duration;
   res = MPI_Reduce(&local_duration, &max_duration, 1, MPI_DOUBLE, MPI_MAX, 0,
                    MPI_COMM_WORLD);

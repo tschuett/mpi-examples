@@ -1,10 +1,10 @@
 #include <mpi.h>
-#include <omp.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
 #include <cassert>
+#include <chrono>
 #include <cstdint>
 #include <utility>
 
@@ -99,7 +99,7 @@ int main(int argc, char** argv) {
   for (int i = 0; i < 6; i++)
     surface_data_out[i] = baseptr + i * N * N;
 
-  double start = omp_get_wtime();
+  auto start = std::chrono::high_resolution_clock::now();
 
   // lock
   MPI_Win_lock_all(MPI_MODE_NOCHECK, data_win);
@@ -178,7 +178,7 @@ int main(int argc, char** argv) {
   MPI_Win_unlock_all(counter_win);
   MPI_Win_unlock_all(data_win);
 
-  double stop = omp_get_wtime();
+  auto stop = std::chrono::high_resolution_clock::now();
 
   verify_result_simple(in, iterations, rank, N);
 
@@ -190,7 +190,8 @@ int main(int argc, char** argv) {
   MPI_Win_free(&data_win);
   MPI_Win_free(&counter_win);
 
-  double local_duration = stop - start;
+  const std::chrono::duration<double> diff = stop - start;
+  const double local_duration = diff.count();
   double max_duration;
   res = MPI_Reduce(&local_duration, &max_duration, 1, MPI_DOUBLE, MPI_MAX, 0,
                    MPI_COMM_WORLD);
