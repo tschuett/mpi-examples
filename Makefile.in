@@ -1,3 +1,5 @@
+SHELL=@CXXSHELL@
+
 CXX=@CXX@
 LD=@CXX@
 
@@ -13,12 +15,12 @@ else
   NVC=@
 endif
 
-NOOMP=cart-pscw-bug.x cart-active-fence.x cart-active-fence-shmem.x cart-active-pscw.x cart-immediate-msg.x cart-passive-counter.x cart-shmem-counter.x
+NOOMP=cart-pscw-bug.x cart-active-fence.x cart-active-fence-shmem.x cart-active-pscw.x cart-immediate-msg.x cart-passive-counter.x
 OMP=cart-active-fence-openmp.x
+SHMEM=cart-shmem-counter.x
+all: $(NOOMP) @OMP@ @SHMEM@ checker.x
 
-all: $(NOOMP) $(OMP) checker.x
-
-%.x: %.o simple.o my-malloc.o shmem.o knl.c
+%.x: %.o simple.o my-malloc.o shmem.o knl.o
 	$(NVC)echo -e "\e[0;33mCreating $@\033[39m"
 	$(VC)$(LD) $(LDFLAGS) $^ -o $@
 
