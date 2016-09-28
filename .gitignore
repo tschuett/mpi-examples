@@ -9,3 +9,4 @@ conftest.cpp
 conftest.er1
 Makefile
 *.o
+*.optrpt
