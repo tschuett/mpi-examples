@@ -6,70 +6,74 @@
 
 #include <cassert>
 
+// (2 + dims_smp[0]*N)*(2 +dims_smp[1]*N)*(2 +dims_smp[2]*N)
+
 #define IN(X, Y, Z)                                                            \
-  in[(X) + dims[1] * N * (Y) + dims[1] * N * dims[2] * N * (Z)]
+  in[(X) + (2 + dims[0] * N) * (Y) +                                           \
+     (2 + dims[0] * N) * (2 + dims[1] * N) * (Z)]
 #define OUT(X, Y, Z)                                                           \
-  out[(X) + dims[1] * N * (Y) + dims[1] * N * dims[2] * N * (Z)]
+  out[(X) + (2 + dims[0] * N) * (Y) +                                          \
+      (2 + dims[0] * N) * (2 + dims[1] * N) * (Z)]
 
 #define SURFACE(X, Y)                                                          \
-  surface[(X) + dims[1] * N * (Y)
-   
-void copy_in_surface_data_shmem(double* in,
-				const double* surface_data_in, int i,
-				int N, const int* coords,
-				const int* dims);
-  const double* restrict surface =
-      surface_data_in + i * N * N;
+  surface[(X) + (dims[0] * N) * (Y)
 
-  switch (i) {
+void copy_in_surface_data_shmem(double* in, const double* surface_data_in,
+                                int i, int N, const int* coords,
+                                const int* dims);
+const double* restrict surface = surface_data_in + i * N * N;
+
+switch (i) {
 case 0: // xplus
   FOR(collapse(2) simd)
-  for (int y = 1 + coords[1] * N; y < coords[1] * N + N + 1; y++) ??
-    for (int z = 1; z < N + 1; z++) {
-      IN(1 + dims_smp[0]*N + 1, y, z) = SURFACE(1, y, z); ???
+  for (int y = 1 + coords[1] * N; y < coords[1] * N + N + 1; y++)
+    for (int z = 1 + coords[2] * N; z < coords[2] * N + 1; z++) {
+      IN(1 + dims[0] * N, y, z) = SURFACE(y - 1, z - 1);
     }
   break;
 case 1: // xminus
   FOR(collapse(2) simd)
-  for (int y = 1; y < N + 1; y++)
-    for (int z = 1; z < N + 1; z++) {
-      IN(0, y, z) = SURFACE(N, y, z);
+  for (int y = 1 + coords[1] * N; y < coords[1] * N + N + 1; y++)
+    for (int z = 1 + coords[2] * N; z < coords[2] * N + 1; z++) {
+      IN(0, y, z) = SURFACE(y - 1, z - 1);
     }
   break;
 case 2: // yplus
   FOR(collapse(2) simd)
-  for (int x = 1; x < N + 1; x++)
-    for (int z = 1; z < N + 1; z++) {
-      IN(x, N + 1, z) = SURFACE(x, 1, z);
+  for (int x = 1 + coords[0] * N; x < coords[0] * N + N + 1; x++)
+    for (int z = 1 + coords[2] * N; z < coords[2] * N + 1; z++) {
+      IN(x, 1 + dims[1] * N, z) = SURFACE(x - 1, z - 1);
     }
   break;
 case 3: // yminus
   FOR(collapse(2) simd)
-  for (int x = 1; x < N + 1; x++)
-    for (int z = 1; z < N + 1; z++) {
-      IN(x, 0, z) = SURFACE(x, N, z);
+  for (int x = 1 + coords[0] * N; x < coords[0] * N + N + 1; x++)
+    for (int z = 1 + coords[2] * N; z < coords[2] * N + 1; z++) {
+      IN(x, 0, z) = SURFACE(x - 1, z - 1);
     }
   break;
 case 4: // zplus
   FOR(collapse(2) simd)
-  for (int x = 1; x < N + 1; x++)
-    for (int y = 1; y < N + 1; y++) {
-      IN(x, y, N + 1) = SURFACE(x, y, 1);
+  for (int x = 1 + coords[0] * N; x < coords[0] * N + N + 1; x++)
+    for (int y = 1 + coords[1] * N; y < coords[1] * N + 1; y++) {
+      IN(x, y, 1 + dims[2] * N) = SURFACE(x - 1, y - 1);
     }
   break;
 case 5: // zminus
   FOR(collapse(2) simd)
-  for (int x = 1; x < N + 1; x++)
-    for (int y = 1; y < N + 1; y++) {
-      IN(x, y, 0) = SURFACE(x, y, N);
+  for (int x = 1 + coords[0] * N; x < coords[0] * N + N + 1; x++)
+    for (int y = 1 + coords[1] * N; y < coords[1] * N + 1; y++) {
+      IN(x, y, 0) = SURFACE(x - 1, y - 1);
     }
   break;
-  }
+}
 }
 
 void copy_in_neighbors_data_shmem(double* in, const double* surface_data_in,
                                   int i, int N, const int* coords,
-                                  const int* dims) {}
+                                  const int* dims) {
+  assert(false);
+}
 
 void memset_shmem(double* in, int N, int* coords, int* dims) {
   /* @todo somebody has to memset the halo */
@@ -80,15 +84,60 @@ void memset_shmem(double* in, int N, int* coords, int* dims) {
 }
 
 void pack_surface_shmem(const double* in, double* surface_data_out, int i,
-                        int N, const int* coords, const int* dims) {}
-
-void update_surface_shmem(double* out, const double* in, int i, int N,
-                          const int* coords_smp, const int* dims) {
+                        int N, const int* coords, const int* dims) {
   switch (i) {
   case 0: // xplus
     FOR(collapse(2) simd)
-    for (int y = 1; y < N + 1; y++)
-      for (int z = 1; z < N + 1; z++) {
+    for (int y = 1 + coords[1] * N; y < N + coords[1] * N + 1; y++)
+      for (int z = 1 + coords[2] * N; z < N + coords[2] * N + 1; z++) {
+        SURFACE(y - 1, z - 1) = IN(dims[0] * N, y, z);
+      }
+    break;
+  case 1: // xminus
+    FOR(collapse(2) simd)
+    for (int y = 1 + coords[1] * N; y < N + coords[1] * N + 1; y++)
+      for (int z = 1 + coords[2] * N; z < N + coords[2] * N + 1; z++) {
+        SURFACE(y - 1, z - 1) = IN(1, y, z);
+      }
+    break;
+  case 2: // yplus
+    FOR(collapse(2) simd)
+    for (int x = 1 + coords[0] * N; x < N + coords[0] * N + 1; x++)
+      for (int z = 1 + coords[2] * N; z < N + coords[2] * N + 1; z++) {
+        SURFACE(x - 1, z - 1) = IN(x, dims[1] * N, z);
+      }
+    break;
+  case 3: // yminus
+    FOR(collapse(2) simd)
+    for (int x = 1 + coords[0] * N; x < N + coords[0] * N + 1; x++)
+      for (int z = 1 + coords[2] * N; z < N + coords[2] * N + 1; z++) {
+        SURFACE(x - 1, z - 1) = IN(x, 1, z);
+      }
+    break;
+  case 4: // zplus
+    FOR(collapse(2) simd)
+    for (int x = 1 + coords[0] * N; x < N + coords[0] * N + 1; x++)
+      for (int y = 1 + coords[1] * N; y < N + coords[1] * N + 1; y++) {
+        SURFACE(x - 1, y - 1) = IN(x, y, dims[2] * N);
+      }
+  case 5: // zminus
+    FOR(collapse(2) simd)
+    for (int x = 1 + coords[0] * N; x < N + coords[0] * N + 1; x++)
+      for (int y = 1 + coords[1] * N; y < N + coords[1] * N + 1; y++) {
+        SURFACE(x - 1, y - 1) = IN(x, y, 1);
+      }
+    break;
+  }
+}
+
+void update_surface_shmem(double* out, const double* in, int i, int N,
+                          const int* coords_smp, const int* dims) {
+  assert(false);
+  switch (i) {
+  case 0: // xplus
+    FOR(collapse(2) simd)
+    for (int y = 1 + coords[1] * N; y < N + coords[1] * N + 1; y++)
+      for (int z = 1 + coords[2] * N; z < N + coords[2] * N + 1; z++) {
         int x = 1;
         OUT(x, y, z) = 1 +
                        (IN(x - 1, y, z) + IN(x + 1, y, z) + IN(x, y - 1, z) +
@@ -103,8 +152,8 @@ void update_surface_shmem(double* out, const double* in, int i, int N,
     break;
   case 1: // xminus
     FOR(collapse(2) simd)
-    for (int y = 1; y < N + 1; y++)
-      for (int z = 1; z < N + 1; z++) {
+    for (int y = 1 + coords[1] * N; y < N + coords[1] * N + 1; y++)
+      for (int z = 1 + coords[2] * N; z < N + coords[2] * N + 1; z++) {
         int x = 1;
         OUT(x, y, z) = 1 +
                        (IN(x - 1, y, z) + IN(x + 1, y, z) + IN(x, y - 1, z) +
@@ -119,8 +168,8 @@ void update_surface_shmem(double* out, const double* in, int i, int N,
     break;
   case 2: // yplus
     FOR(collapse(2) simd)
-    for (int x = 1; x < N + 1; x++)
-      for (int z = 1; z < N + 1; z++) {
+    for (int x = 1 + coords[0] * N; x < N + coords[0] * N + 1; x++)
+      for (int z = 1 + coords[2] * N; z < N + coords[2] * N + 1; z++) {
         int y = 1;
         OUT(x, y, z) = 1 +
                        (IN(x - 1, y, z) + IN(x + 1, y, z) + IN(x, y - 1, z) +
@@ -135,8 +184,8 @@ void update_surface_shmem(double* out, const double* in, int i, int N,
     break;
   case 3: // yminus
     FOR(collapse(2) simd)
-    for (int x = 1; x < N + 1; x++)
-      for (int z = 1; z < N + 1; z++) {
+    for (int x = 1 + coords[0] * N; x < N + coords[0] * N + 1; x++)
+      for (int z = 1 + coords[2] * N; z < N + coords[2] * N + 1; z++) {
         int y = 1;
         OUT(x, y, z) = 1 +
                        (IN(x - 1, y, z) + IN(x + 1, y, z) + IN(x, y - 1, z) +
@@ -151,8 +200,8 @@ void update_surface_shmem(double* out, const double* in, int i, int N,
     break;
   case 4: // zplus
     FOR(collapse(2) simd)
-    for (int x = 1; x < N + 1; x++)
-      for (int y = 1; y < N + 1; y++) {
+    for (int x = 1 + coords[0] * N; x < N + coords[0] * N + 1; x++)
+      for (int y = 1 + coords[1] * N; y < N + coords[1] * N + 1; y++) {
         int z = 1;
         OUT(x, y, z) = 1 +
                        (IN(x - 1, y, z) + IN(x + 1, y, z) + IN(x, y - 1, z) +
@@ -167,8 +216,8 @@ void update_surface_shmem(double* out, const double* in, int i, int N,
     break;
   case 5: // zminus
     FOR(collapse(2) simd)
-    for (int x = 1; x < N + 1; x++)
-      for (int y = 1; y < N + 1; y++) {
+    for (int x = 1 + coords[0] * N; x < N + coords[0] * N + 1; x++)
+      for (int y = 1 + coords[1] * N; y < N + coords[1] * N + 1; y++) {
         int z = 1;
         OUT(x, y, z) = 1 +
                        (IN(x - 1, y, z) + IN(x + 1, y, z) + IN(x, y - 1, z) +
@@ -187,16 +236,13 @@ void update_surface_shmem(double* out, const double* in, int i, int N,
 void update_local_grid_shmem(double* out, const double* in, int N,
                              const int* coords, const int* dims,
                              const int* neighbors) {
-  // @todo: also updat?
-  ? ?
-    ? for (int x = 2 + coords[0] * N; x < N + coords[0] * N;
-           x++) for (int y = 2 + coords[1] * N; y < N + coords[1] * N;
-                     y++) for (int z = 2 + coords[2] * N; z < N + coords[2] * N;
-                               z++) OUT(x, y, z) =
-          1 +
-          (IN(x - 1, y, z) + IN(x + 1, y, z) + IN(x, y - 1, z) +
-           IN(x, y + 1, z) + IN(x, y, z - 1) + IN(x, y, z + 1)) /
-              6.0;
+  for (int x = 2 + coords[0] * N; x < N + coords[0] * N; x++)
+    for (int y = 2 + coords[1] * N; y < N + coords[1] * N; y++)
+      for (int z = 2 + coords[2] * N; z < N + coords[2] * N; z++)
+        OUT(x, y, z) = 1 +
+                       (IN(x - 1, y, z) + IN(x + 1, y, z) + IN(x, y - 1, z) +
+                        IN(x, y + 1, z) + IN(x, y, z - 1) + IN(x, y, z + 1)) /
+                           6.0;
 }
 
 void verify_result_shmem(double* in, int iterations, int rank, int N,

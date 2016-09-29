@@ -178,11 +178,12 @@ int main(int argc, char** argv) {
 
   // init shmem window
   // we need two volumes: in and out
-  // the size of one volume is (2 + dims_smp[0]*N)*(2 +*N)*(2 +x*N)
+  // the size of one volume is (2 + dims_smp[0]*N)*(2 +dims_smp[1]*N)*(2
+  // +dims_smp[2]*N)
   size_t size_of_volume =
       (2 + dims_smp[0] * N) * (2 + dims_smp[1] * N) * (2 + dims_smp[0] * N);
   // all ranks have to provide the same value to allocate_shared
-  size_t local_shmem_size = ceil(size_of_volume / (double)size_smp);
+  size_t local_shmem_size = ceil((double)size_of_volume / (double)size_smp);
   res = MPI_Win_allocate_shared(local_shmem_size * sizeof(double),
                                 sizeof(double), MPI_INFO_NULL, comm_smp_cart,
                                 &local_shared_baseptr, &shared_win);
