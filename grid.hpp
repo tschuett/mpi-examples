@@ -25,4 +25,4 @@ public:
   uint32_t zminus() const;
 };
 
-extern Grid get_3d_grid(uint32_t size, uint32_t rank);
+extern Grid get_3d_grid(uint32_t rank, uint32_t size);

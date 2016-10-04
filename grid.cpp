@@ -29,7 +29,7 @@ uint32_t Grid::xplus() const {
 }
 
 uint32_t Grid::xminus() const {
-  return coords2rank({(coords[0] - 1) % dims[0], coords[1], coords[2]});
+  return coords2rank({(coords[0] - 1 + dims[0]) % dims[0], coords[1], coords[2]});
 }
 
 uint32_t Grid::yplus() const {
@@ -37,7 +37,7 @@ uint32_t Grid::yplus() const {
 }
 
 uint32_t Grid::yminus() const {
-  return coords2rank({coords[0], (coords[1] - 1) % dims[1], coords[2]});
+  return coords2rank({coords[0], (coords[1] - 1 + dims[1]) % dims[1], coords[2]});
 }
 
 uint32_t Grid::zplus() const {
@@ -45,10 +45,10 @@ uint32_t Grid::zplus() const {
 }
 
 uint32_t Grid::zminus() const {
-  return coords2rank({coords[0], coords[1], (coords[2] - 1) % dims[2]});
+  return coords2rank({coords[0], coords[1], (coords[2] - 1 + dims[2]) % dims[2]});
 }
 
-Grid get_3d_grid(uint32_t size, uint32_t rank) {
+Grid get_3d_grid(uint32_t rank, uint32_t size) {
   switch (size) {
   case 5440:
     return Grid({16, 17, 20}, rank, size);
@@ -62,7 +62,7 @@ Grid get_3d_grid(uint32_t size, uint32_t rank) {
     return Grid({4, 4, 17}, rank, size);
   case 256:
     return Grid({4, 8, 8}, rank, size);
-  case 16:
+  case 160:
     return Grid({4, 5, 8}, rank, size);
   case 136:
     return Grid({2, 4, 17}, rank, size);
@@ -76,10 +76,24 @@ Grid get_3d_grid(uint32_t size, uint32_t rank) {
     return Grid({4, 4, 4}, rank, size);
   case 36:
     return Grid({2, 3, 6}, rank, size);
+  case 32:
+    return Grid({2, 4, 4}, rank, size);
+  case 27:
+    return Grid({3, 3, 3}, rank, size);
   case 24:
     return Grid({2, 2, 6}, rank, size);
+  case 16:
+    return Grid({2, 2, 4}, rank, size);
   case 12:
     return Grid({2, 2, 3}, rank, size);
+  case 8:
+    return Grid({2, 2, 2}, rank, size);
+  case 4:
+    return Grid({1, 2, 2}, rank, size);
+  case 2:
+    return Grid({1, 1, 2}, rank, size);
+  case 1:
+    return Grid({1, 1, 1}, rank, size);
   default:
     assert(false);
   }
