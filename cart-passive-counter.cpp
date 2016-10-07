@@ -170,7 +170,7 @@ int main(int argc, char** argv) {
           (counter_baseptr[10] == epoch) && (counter_baseptr[11] == epoch);
     }
 
-    // 8. swap in and out
+    // 10. swap in and out
     swap(in, out);
   }
 

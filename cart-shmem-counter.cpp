@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include <cassert>
+#include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <utility>
@@ -108,7 +109,7 @@ int main(int argc, char** argv) {
   for (int i = 0; i < 6; i++)
     surface_data_out[i] = baseptr + i * N * N;
 
-  double start = omp_get_wtime();
+  auto start = std::chrono::high_resolution_clock::now();
 
   shmem_barrier_all();
 
@@ -171,7 +172,7 @@ int main(int argc, char** argv) {
     swap(in, out);
   }
 
-  double stop = omp_get_wtime();
+  auto stop = std::chrono::high_resolution_clock::now();
 
   verify_result_simple(in, iterations, rank, N);
 
@@ -183,7 +184,8 @@ int main(int argc, char** argv) {
   // shmem_free(&baseptr);
   // shmem_free(&counter_baseptr);
 
-  double local_duration = stop - start;
+  std::chrono::duration<double> diff = stop - start;
+  const double local_duration = diff.count();
   double max_duration;
   res = MPI_Reduce(&local_duration, &max_duration, 1, MPI_DOUBLE, MPI_MAX, 0,
                    MPI_COMM_WORLD);

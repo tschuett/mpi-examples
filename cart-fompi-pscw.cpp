@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <chrono>
 #include <utility>
 #include <vector>
 
@@ -115,7 +116,8 @@ int main(int argc, char** argv) {
   for (int i = 0; i < 6; i++)
     surface_data_in[i] = baseptr + i * N * N;
 
-  double start = omp_get_wtime();
+  auto start = std::chrono::high_resolution_clock::now();
+
   for (int epoch = 1; epoch < iterations + 1; epoch++) {
     // 1. open exposure epoch
     res = foMPI_Win_post(group, 0 /*assert*/, data_win); //@todo
@@ -153,7 +155,8 @@ int main(int argc, char** argv) {
     // 9. swap in and out
     swap(in, out);
   }
-  double stop = omp_get_wtime();
+
+  auto stop = std::chrono::high_resolution_clock::now();
 
   verify_result_simple(in, iterations, rank, N);
 
@@ -164,7 +167,8 @@ int main(int argc, char** argv) {
     my_free(surface_data_out[i]);
   foMPI_Win_free(&data_win);
 
-  double local_duration = stop - start;
+  std::chrono::duration<double> diff = stop - start;
+  const double local_duration = diff.count();
   double max_duration;
   res = MPI_Reduce(&local_duration, &max_duration, 1, MPI_DOUBLE, MPI_MAX, 0,
                    MPI_COMM_WORLD);
